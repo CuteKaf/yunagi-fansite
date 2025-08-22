@@ -1,0 +1,45 @@
+baseURL = "https://yunagi.club/"
+languageCode = "zh-cn"
+title = "夕凪機 FanSite"
+theme = "minimal"
+
+[menus]
+  [[menus.main]]
+    identifier = "profile"
+    name = "夕凪機简介"
+    url = "/profile/"
+    weight = 1
+
+  [[menus.main]]
+    identifier = "posts"
+    name = "博客"
+    url = "/posts/"
+    weight = 2
+
+  [[menus.main]]
+    identifier = "faq"
+    name = "FAQ"
+    url = "/faq/"
+    weight = 3
+
+  [[menus.main]]
+    identifier = "links"
+    name = "链接"
+    url = "/links/"
+    weight = 4
+
+  [[menus.main]]
+    identifier = "contact"
+    name = "联系"
+    url = "/contact/"
+    weight = 5
+
+  [[menus.main]]
+    identifier = "about"
+    name = "关于"
+    url = "/about/"
+    weight = 6
+
+[params]
+  author = "夕凪機"
+  description = "欢迎来到夕凪機的粉丝网站"
