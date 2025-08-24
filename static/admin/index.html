@@ -5,18 +5,23 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Content Manager</title>
 
-    <!-- Netlify Identity（处理邀请/登录） -->
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <!-- 关键：先声明手动初始化，避免脚本自动启动报错 -->
+    <script>window.CMS_MANUAL_INIT = true;</script>
 
-    <!-- DecapCMS（原 NetlifyCMS），用 jsDelivr 更稳 -->
-    <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3/dist/decap-cms.js"></script>
+    <!-- Netlify Identity（邀请/登录） -->
+    <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+
+    <!-- DecapCMS（原 NetlifyCMS），用 jsDelivr；defer 确保 DOM 解析后再执行 -->
+    <script defer src="https://cdn.jsdelivr.net/npm/decap-cms@^3/dist/decap-cms.js"></script>
   </head>
   <body>
-    <div id="cms-root"></div>
+    <!-- 给 CMS 一个挂载点（有些版本需要） -->
+    <div id="nc-root"></div>
+
     <script>
       function startCMS() {
-        const CMSGlobal = window.CMS || window.DecapCMS;   // 兼容老/新命名
-        if (!CMSGlobal) { setTimeout(startCMS, 100); return; }  // 等脚本真正加载
+        const CMSGlobal = window.DecapCMS || window.CMS;
+        if (!CMSGlobal) { return setTimeout(startCMS, 100); } // 等脚本真正加载
         CMSGlobal.init({
           config: {
             backend: { name: "git-gateway", branch: "main" },
@@ -25,16 +30,8 @@
         });
       }
 
-      function bootWhenReady() {
-        // 等 DOM Ready，避免 appendChild on null
-        if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", startAfterIdentity);
-        } else {
-          startAfterIdentity();
-        }
-      }
-
-      function startAfterIdentity() {
+      function initAfterIdentity() {
+        // 身份就绪后再启动 CMS
         if (window.netlifyIdentity) {
           window.netlifyIdentity.on("init", (user) => {
             if (user) {
@@ -48,18 +45,24 @@
               });
             }
           });
-          // 如果是邀请链接（别页进站），自动弹注册
+
+          // 如果通过邀请链接进入，自动弹注册
           const hash = window.location.hash || "";
           if (hash.includes("invite_token")) {
             window.netlifyIdentity.open("signup");
           }
         } else {
-          // 没有 Identity（本地预览等）也能启动
+          // 没有 Identity 时（本地预览）也能启动
           startCMS();
         }
       }
 
-      bootWhenReady();
+      // 等 DOM 解析完成再开始（修复 appendChild 空引用）
+      if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAfterIdentity);
+      } else {
+        initAfterIdentity();
+      }
     </script>
   </body>
 </html>
