@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Content Manager</title>
 
-    <!-- Netlify Identity 登录组件（Git Gateway 必需） -->
+    <!-- Netlify Identity（处理登录/邀请） -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
     <!-- DecapCMS（原 NetlifyCMS），用 jsDelivr 更稳 -->
@@ -13,18 +13,40 @@
   </head>
   <body>
     <script>
-      // 初始化 CMS
-      CMS.init();
+      // 等登录状态就绪后再启动 CMS，避免空白
+      function startCMS() {
+        // 指定后端，其他配置仍从 /admin/config.yml 读取
+        CMS.init({
+          config: {
+            backend: { name: "git-gateway", branch: "main" },
+            load_config_file: true
+          }
+        });
+      }
 
-      // 若用户未登录，监听登录事件并回到 /admin
       if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", user => {
-          if (!user) {
+        window.netlifyIdentity.on("init", (user) => {
+          if (user) {
+            startCMS();
+          } else {
             window.netlifyIdentity.on("login", () => {
-              document.location.href = "/admin/";
+              startCMS();
+              // 登录完成后确保留在 /admin/
+              if (!location.pathname.endsWith("/admin/")) {
+                location.href = "/admin/";
+              }
             });
           }
         });
+
+        // 如果是通过邀请链接进站（首页/任意页），自动弹出注册
+        const hash = window.location.hash || "";
+        if (hash.includes("invite_token")) {
+          window.netlifyIdentity.open("signup");
+        }
+      } else {
+        // 兜底：即使没有 Identity 也尝试启动（便于本地预览）
+        startCMS();
       }
     </script>
   </body>
