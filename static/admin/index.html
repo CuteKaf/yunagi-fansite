@@ -5,18 +5,19 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Content Manager</title>
 
-    <!-- Netlify Identity（处理登录/邀请） -->
+    <!-- Netlify Identity（处理邀请/登录） -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 
     <!-- DecapCMS（原 NetlifyCMS），用 jsDelivr 更稳 -->
-    <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/decap-cms@^3/dist/decap-cms.js"></script>
   </head>
   <body>
+    <div id="cms-root"></div>
     <script>
-      // 等登录状态就绪后再启动 CMS，避免空白
       function startCMS() {
-        // 指定后端，其他配置仍从 /admin/config.yml 读取
-        CMS.init({
+        const CMSGlobal = window.CMS || window.DecapCMS;   // 兼容老/新命名
+        if (!CMSGlobal) { setTimeout(startCMS, 100); return; }  // 等脚本真正加载
+        CMSGlobal.init({
           config: {
             backend: { name: "git-gateway", branch: "main" },
             load_config_file: true
@@ -24,30 +25,41 @@
         });
       }
 
-      if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", (user) => {
-          if (user) {
-            startCMS();
-          } else {
-            window.netlifyIdentity.on("login", () => {
-              startCMS();
-              // 登录完成后确保留在 /admin/
-              if (!location.pathname.endsWith("/admin/")) {
-                location.href = "/admin/";
-              }
-            });
-          }
-        });
-
-        // 如果是通过邀请链接进站（首页/任意页），自动弹出注册
-        const hash = window.location.hash || "";
-        if (hash.includes("invite_token")) {
-          window.netlifyIdentity.open("signup");
+      function bootWhenReady() {
+        // 等 DOM Ready，避免 appendChild on null
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", startAfterIdentity);
+        } else {
+          startAfterIdentity();
         }
-      } else {
-        // 兜底：即使没有 Identity 也尝试启动（便于本地预览）
-        startCMS();
       }
+
+      function startAfterIdentity() {
+        if (window.netlifyIdentity) {
+          window.netlifyIdentity.on("init", (user) => {
+            if (user) {
+              startCMS();
+            } else {
+              window.netlifyIdentity.on("login", () => {
+                startCMS();
+                if (!location.pathname.endsWith("/admin/")) {
+                  location.href = "/admin/";
+                }
+              });
+            }
+          });
+          // 如果是邀请链接（别页进站），自动弹注册
+          const hash = window.location.hash || "";
+          if (hash.includes("invite_token")) {
+            window.netlifyIdentity.open("signup");
+          }
+        } else {
+          // 没有 Identity（本地预览等）也能启动
+          startCMS();
+        }
+      }
+
+      bootWhenReady();
     </script>
   </body>
 </html>
